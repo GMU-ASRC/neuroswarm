@@ -30,8 +30,6 @@ stop_at_goal: false
 #     - 0.1
 #     - 0.1
 #     - 0.06
-scale_forward_speed: 0.2  # m/s
-scale_turning_rates: 2.0  # rad/s
 body_color:
   - 255
   - 0
