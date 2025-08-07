@@ -1,3 +1,4 @@
+swarmsim
 tqdm
 pandas
 openpyxl
