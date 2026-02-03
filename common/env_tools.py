@@ -48,7 +48,6 @@ def get_module_version(module):
         return version(module.__version__)
 
 
-
 def search_git_root(path, max_recursions=10):
     path = pl.Path(path)
     return _search_git_root(path, 0, max_recursions=max_recursions)

@@ -151,7 +151,7 @@ class ConnorMillingExperiment(TennExperiment):
         return metric.average if metric.instantaneous else metric.value
 
     @override
-    def fitness(self, processor, network, init_callback=lambda x: x):
+    def fitness(self, processor, network, init_callback=None):
         world_final_state = self.simulate(processor, network, init_callback)
         return self.extract_fitness(world_final_state)
 

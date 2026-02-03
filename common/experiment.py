@@ -62,6 +62,8 @@ class TennExperiment(Application):
         else:
             self.save_strategy = "one_best"
 
+        # TODO: re-structure this mess or document it better
+
         # set project mode.
         self.p: project.UnzippedProject | project.FolderlessProject
         if args.project is None and args.network:
@@ -75,10 +77,11 @@ class TennExperiment(Application):
                 # no project name specified, so use the experiment name and timestamp
                 suffix = args.environment if args.pname_suffix is None else args.pname_suffix
                 project_name = f"{time.strftime('%y%m%d-%H%M%S')}{'-' + suffix if suffix else ''}"
-                self.p = project.UnzippedProject(path=args.root / project_name, name=project_name)
+                self.p = project.Project(path=args.root / project_name, name=project_name)
             elif args.project is None:
                 # no project name specified; ask user
                 path = project.inquire_project(root=args.root)
+                # this could be train or run/test
                 self.p = project.UnzippedProject(path=path, name=path.name)
             elif RE_CONTAINS_SEP.search(args.project):  # project name contains a path separator
                 project_name = pathlib.Path(args.project).name
@@ -88,11 +91,19 @@ class TennExperiment(Application):
                 self.p = project.UnzippedProject(path=args.project, name=project_name)
             else:
                 project_name = args.project
-                self.p = project.UnzippedProject(path=args.root / project_name, name=project_name, overwrite=args.overwrite_project)
-            if not self.p._original_path.exists():
-                msg = f"Project path {self.p._original_path} does not exist."
-                raise FileNotFoundError(msg)
-            self.p.unzip()  # no effect if not a zip file
+                self.p = project.UnzippedProject(path=args.root / project_name, name=project_name,
+                                                 overwrite=args.overwrite_project)
+            if args.action == 'train':
+                if isinstance(self.p, project.UnzippedProject) and not hasattr(self.p, 'root'):
+                    self.p.downgrade()
+            else:
+                # for run/test, check that the project folder exists.
+                # for train, it'll be created later.
+                if not self.p.original_path.exists():
+                    msg = f"Project path {self.p.original_path} does not exist."
+                    raise FileNotFoundError(msg)
+                if isinstance(self.p, project.UnzippedProject):
+                    self.p.unzip()  # no effect if not a zip file
             self.log_fitnesses = self.p.log_popfit
 
         # app_params = ['encoder_ticks', ]

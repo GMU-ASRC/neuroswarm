@@ -256,6 +256,20 @@ class FolderlessProject:
 
 
 class Project(FolderlessProject):
+    """Project class for managing project data.
+
+    Contains Paths to stuff in the project folder.
+
+    Parameters
+    ----------
+    path : str | pathlib.Path
+        Path to the project folder. Does not need to exist.
+    name : str, optional
+        Name of the project. If not specified, the name will be the same as the folder name.
+    overwrite : bool, default=False
+        Whether to overwrite existing files in the project folder. Defaults to False.
+    """
+
     isproj = True
 
     def __init__(self, name=None, path=None, overwrite=False):
@@ -275,6 +289,10 @@ class Project(FolderlessProject):
         self.popfit_file.firstcall = self._default_firstcall
         self.artifacts = self.root / 'artifacts'
         self._opened = True
+
+    @property
+    def original_path(self):
+        return self.root
 
     def possibly_valid(self):
         checks = [
@@ -376,6 +394,7 @@ class Project(FolderlessProject):
             create_parents = True
         print(f"Creating project folder at {self.root}")
         ensure_dir_exists(self.root, parents=create_parents)
+        self._opened = True
 
     @property
     @override
@@ -466,6 +485,23 @@ class Networks:
 
 
 class UnzippedProject(Project):
+    """Wrapper around Project which allows for usage of zipped project data.
+
+    The primary use case assumes that it gets initialized with a path to a .zip file.
+    In that case, it will unzip the file to a tmp directory.
+    However, if the path is an existing folder with project data, data won't be moved.
+
+    Parameters
+    ----------
+    path : str | pathlib.Path
+        Path to the project folder or zip file.
+    name : str, optional
+        Name of the project. If not specified, the name will be the same as the folder name.
+    overwrite : bool, default=False
+        Whether to overwrite existing files in the project folder. Defaults to False.
+    temp_path : str | pathlib.Path, optional
+        Path to the temporary directory. If not specified, a random prefix will be used.
+    """
     def __init__(self, path, name=None, overwrite=False, temp_path=None):
         self._original_path = pl.Path(path)
         self._tempdir = None
@@ -476,6 +512,12 @@ class UnzippedProject(Project):
         else:
             self.name = self._original_path.stem
             self.allow_overwrite = overwrite
+
+    def downgrade(self):
+        super().__init__(name=self.original_path.stem,
+                         path=self.original_path,
+                         overwrite=self.allow_overwrite)
+        self._opened = True
 
     @property
     def original_path(self):
