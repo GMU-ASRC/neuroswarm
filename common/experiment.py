@@ -334,8 +334,8 @@ def run(app, args):
         net = app.net
 
     # Run app and print fitness
-    fitness = app.fitness(proc, net)
-    print(f"Fitness: {fitness:8.4f}")
+    _world, metric, fitness = app.fitness(proc, net, return_multi=True)
+    print(f"Fitness ({metric.name}): {fitness:8.4f}")
     return fitness
 
 

@@ -18,6 +18,7 @@ import rss.graphing as graphing
 # typing:
 from typing import override
 from swarmsim.world.RectangularWorld import RectangularWorld
+from swarmsim.metrics.AbstractMetric import AbstractMetric
 
 from common.argparse import ArgumentError
 
@@ -108,9 +109,9 @@ class ConnorMillingExperiment(TennExperiment):
 
         config.metrics = [
             metrics.Circliness(history=max(self.cycles, 1), avg_history_max=450),
-            # metrics.DelaunayDiffusion(history=max(self.cycles, 1)),
-            # metrics.Aggregation(history=max(self.cycles, 1)),
-            # metrics.DistanceSizeRatio(history=max(self.cycles, 1)),
+            metrics.DelaunayDiffusion(history=max(self.cycles, 1)),
+            metrics.Aggregation(history=max(self.cycles, 1)),
+            metrics.DistanceSizeRatio(history=max(self.cycles, 1)),
         ]
 
         def callback(world, screen):
@@ -143,17 +144,43 @@ class ConnorMillingExperiment(TennExperiment):
         world = simulator(**simargs)  # run simulator
         return world
 
-    def extract_fitness(self, world_output: RectangularWorld):
-        self.run_info = world_output.metrics[0].value_history if world_output.metrics else None
+    def pick_metric(self, world, behavior: int | str | type[AbstractMetric] = 0):
+        if behavior in world.metrics:
+            return behavior
+        if isinstance(behavior, type):
+            behavior = behavior.name
+        if isinstance(behavior, int):
+            return world.metrics[behavior]
+        elif isinstance(behavior, str) and behavior:
+            # set metric to the first metric with the given name, or raise an error
+            for metric in world.metrics:
+                if metric.name and metric.name == behavior:
+                    return metric
+            for metric in world.metrics:
+                if type(metric).__name__ == behavior:
+                    return metric
+            else:
+                msg = f"Could not find metric '{behavior}' in world metrics"
+                raise IndexError(msg)
+        msg = f"behavior must be int, str, or type[AbstractMetric]. Got {type(behavior)}"
+        raise TypeError(msg)
+
+    def extract_fitness(self, world_output: RectangularWorld, behavior: int | str | type[AbstractMetric] = 0):
+        metric: AbstractMetric = self.pick_metric(world_output, behavior)
+        self.run_info = metric.value_history if world_output.metrics else None
         if not world_output.metrics:
             return 0.0
-        metric = world_output.metrics[0]
         return metric.average if metric.instantaneous else metric.value
 
     @override
-    def fitness(self, processor, network, init_callback=None):
+    def fitness(self, processor, network, init_callback=None, return_multi=False):
         world_final_state = self.simulate(processor, network, init_callback)
-        return self.extract_fitness(world_final_state)
+
+        if return_multi:
+            metric = self.pick_metric(world_final_state, self.args.behavior)
+            return world_final_state, metric, self.extract_fitness(world_final_state, metric)
+
+        return self.extract_fitness(world_final_state, self.args.behavior)
 
     def as_config_dict(self):
         d = super().as_config_dict()
@@ -223,9 +250,8 @@ def run(app, args):
         net = app.net
 
     # Run app and print fitness
-    world = app.simulate(proc, net)
-    fitness = app.extract_fitness(world)
-    print(f"Fitness: {fitness:8.4f}")
+    world, metric, fitness = app.fitness(proc, net, return_multi=True)
+    print(f"Fitness ({metric.name}): {fitness:8.4f}")
 
     if args.log_trajectories:
         import matplotlib.pyplot as plt
@@ -293,6 +319,7 @@ def get_parsers(parser, subpar):
                          type=int, help="# of agents to run with.",)
         sub.add_argument('--world_yaml', default="rss/turbopi-milling/world.yaml",
                          type=str, help="path to yaml config for sim")
+        sub.add_argument('--behavior', default=0, help="behavior to run. Either int or string matching a behavior name.")
 
     # for key in ('test', 'run'):  # arguments that apply to test/validation and stdin
     #     pass  # sp[key].add_argument()
