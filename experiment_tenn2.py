@@ -138,11 +138,16 @@ class ConnorMillingExperiment(TennExperiment):
         )
 
         # allow for callback to modify config
-        if callable(init_callback):
+        if (callable(init_callback)
+            or hasattr(self, 'init_callback') and (init_callback := self.init_callback)):
             simargs = init_callback(self, simargs)
 
         world = simulator(**simargs)  # run simulator
         return world
+
+    @staticmethod
+    def init_callback(self, simargs):
+        return simargs
 
     def pick_metric(self, world, behavior: int | str | type[AbstractMetric] = 0):
         if behavior in world.metrics:

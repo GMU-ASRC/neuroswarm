@@ -120,7 +120,6 @@ class CaspianBinaryController(AbstractController):
 
         self.extra_ticks = extra_ticks
 
-
         self.processor_params = self.network.get_data("processor")
         self.setup_processor(self.processor_params)
 
