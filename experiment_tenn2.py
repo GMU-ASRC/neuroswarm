@@ -345,24 +345,26 @@ def get_parsers(parser, subpar):
     return parser, subpar
 
 
-def main():
+def main(name="connorsim_snn_eons-v01", cls=ConnorMillingExperiment, parser_callback=None):
     parser, subpar = common.experiment.get_parsers()
     parser, subpar = get_parsers(parser, subpar)  # modify parser
+    if callable(parser_callback):
+        parser, subpar = parser_callback(parser, subpar)
 
     args = parser.parse_args()
 
-    args.environment = "connorsim_snn_eons-v01"  # type: ignore[reportAttributeAccessIssue]
+    args.environment = name
     if args.project is None and args.logfile is None:
         args.logfile = "tenn2_train.log"
 
-    app = ConnorMillingExperiment(args)
+    app = cls(args)
 
     # Do the appropriate action
-    if args.action == "train":  # type: ignore[reportAttributeAccessIssue]
+    if args.action == "train":
         common.experiment.train(app, args)
-    elif args.action == "test":  # type: ignore[reportAttributeAccessIssue]
+    elif args.action == "test":
         test(app, args)
-    elif args.action == "run":  # type: ignore[reportAttributeAccessIssue]
+    elif args.action == "run":
         run(app, args)
     else:
         raise RuntimeError("No action selected")
